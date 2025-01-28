@@ -3,7 +3,7 @@ locals {
   subnet_name1     = "public-subnet"
   subnet_name_a    = "public-a-subnet"
   subnet_name_b    = "public-b-subnet"
-  subnet_name_c    = "public-c-subnet"
+  subnet_name_d    = "public-d-subnet"
   disk1_name       = "vm-disk-public"
   vm_lamp_name     = "vm-lamp"
   platform_id      = "standard-v3"
