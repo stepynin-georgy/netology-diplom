@@ -25,9 +25,9 @@ resource "yandex_vpc_subnet" "public-b" {
   v4_cidr_blocks = ["192.168.20.0/24"]
 }
 
-resource "yandex_vpc_subnet" "public-c" {
-  name           = local.subnet_name_c
-  zone           = var.default_zone_c
+resource "yandex_vpc_subnet" "public-d" {
+  name           = local.subnet_name_d
+  zone           = var.default_zone_d
   network_id     = yandex_vpc_network.diplom-network.id
   v4_cidr_blocks = ["192.168.30.0/24"]
 }

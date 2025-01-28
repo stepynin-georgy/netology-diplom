@@ -10,9 +10,9 @@ variable "default_zone_b" {
   description = "https://cloud.yandex.ru/docs/overview/concepts/geo-scope"
 }
 
-variable "default_zone_c" {
+variable "default_zone_d" {
   type        = string
-  default     = "ru-central1-c"
+  default     = "ru-central1-d"
   description = "https://cloud.yandex.ru/docs/overview/concepts/geo-scope"
 }
 
