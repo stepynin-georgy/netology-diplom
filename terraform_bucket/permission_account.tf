@@ -6,7 +6,7 @@ resource "yandex_iam_service_account" "service-account" {
 resource "yandex_resourcemanager_folder_iam_member" "service-account-editor" {
   folder_id = var.folder_id
   role      = "editor"
-  member    = "serviceAccount:${yandex_iam_service_account.sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.service-account.id}"
 }
 
 resource "yandex_iam_service_account_static_access_key" "service-account-static-key" {
