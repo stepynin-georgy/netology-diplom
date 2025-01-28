@@ -1,6 +1,6 @@
 resource "yandex_iam_service_account" "service-account" {
   folder_id = var.folder_id
-  name      = "terraform-service"
+  name      = "terraform-service-account"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "service-account-editor" {
