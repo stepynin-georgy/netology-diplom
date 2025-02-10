@@ -1836,15 +1836,15 @@ prometheus-operated                       ClusterIP   None            <none>    
 
 Prometheus доступен по адресу: http://158.160.13.135:32004/query :
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_4.png)
+![изображение](img/Screenshot_4.png)
 
 Grafana доступна по адресу: http://158.160.13.135:31558/login :
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_3.png)
+![изображение](img/Screenshot_3.png)
 
 Дашборд grafana отображающий состояние kubernetes кластера:
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_13.png)
+![изображение](img/Screenshot_13.png)
 
 Для деплоя тестового приложения в кластер написан [deployment.yaml](https://github.com/stepynin-georgy/nginx-diplom/blob/main/deployment.yaml):
 
@@ -1947,7 +1947,7 @@ NAME           TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
 test-app-svc   NodePort   10.233.47.93   <none>        80:30080/TCP   13s
 ```
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_5.png)
+![изображение](img/Screenshot_5.png)
 
 ---
 ### Установка и настройка CI/CD
@@ -1971,7 +1971,7 @@ test-app-svc   NodePort   10.233.47.93   <none>        80:30080/TCP   13s
 
 Выполнять настройки ci/cd системы для автоматической сборки docker image и деплоя приложения при изменении бeдует использоваться GitHub Action. В репозиторий https://github.com/stepynin-georgy/nginx-diplom были добавлены secrets для входа в учетную запись dockerhub и конфиг для подключения к кластеру kubernetest через kubectl:
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_14.png)
+![изображение](img/Screenshot_14.png)
 
 В репозитории была создана директория .github/workflows/, в ней файл: [ci-cd.yaml](https://github.com/stepynin-georgy/nginx-diplom/blob/main/.github/workflows/ci-cd.yaml) - автоматической сборки docker image и деплоя приложени:
 
@@ -2079,19 +2079,19 @@ kubectl create namespace netology
 
 Отредактируем index.html. Пушим в репозиторий с коммитом v1.2.1. Автоматическая сборка image с тегом v1.2.1 и деплой приложения в кластер прошли успешно:
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_15.png)
+![изображение](img/Screenshot_15.png)
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_6.png)
+![изображение](img/Screenshot_6.png)
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_16.png)
+![изображение](img/Screenshot_16.png)
 
 Повторяем те же самые действия, но с другим тегом, v1.3.1. Сборка и деплой также прошли успешно:
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_7.png)
+![изображение](img/Screenshot_7.png)
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_17.png)
+![изображение](img/Screenshot_17.png)
 
-![изображение](stepynin-georgy/netology-diplom/img/Screenshot_18.png)
+![изображение](img/Screenshot_18.png)
 
 Сслыка на action: https://github.com/stepynin-georgy/nginx-diplom/actions/runs/13159422703
 
