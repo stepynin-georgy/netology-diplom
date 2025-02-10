@@ -54,7 +54,7 @@
 
 Конфигурация terraform: 
 
-(provider.tf)[stepynin-georgy/netology-diplom/terraform_infrastructure/provider.tf]:
+[provider.tf](stepynin-georgy/netology-diplom/terraform_infrastructure/provider.tf):
 
 <details><summary>provider.tf</summary>
 
