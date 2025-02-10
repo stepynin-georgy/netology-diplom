@@ -291,6 +291,70 @@ variable "ssh_public" {
   type        = string
   description = "https://cloud.yandex.ru/docs/resource-manager/operations/folder/get-id"
 }
+
+```
+</details>
+
+Для развертывания инфраструктуры был выбран Github Action. Для этого была создана папка .github/workflows/, а в ней два файла: terraform-bucket.yml - для развертывания бакета и сервисного аккаунта, terraform-infrastructure.yml - для развертывания остальной инфраструктуры (ВМ, сети, подсети и пр.).
+
+</details>
+
+<details><summary>[terraform_bucket.yml](.github/workflows/terraform_bucket.yml)</summary>
+
+```
+name: 'Terraform bucket'
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform_bucket/**'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Set to "true" to apply bucket changes'
+        required: false
+        default: 'false'
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+
+    env:
+      TOKEN: ${{ secrets.YC_TOKEN }}
+      CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
+      FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      SSH_PUBLIC: ${{ secrets.SSH_PUBLIC }}
+      SSH_PRIVATE: ${{ secrets.SSH_PRIVATE }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: "1.5.5"
+
+    - name: Terraform Init
+      run: terraform -chdir=./terraform_bucket init
+
+    - name: Terraform Format and Validate
+      run: terraform -chdir=./terraform_bucket validate
+
+    - name: Terraform Plan
+      run: |
+        terraform -chdir=./terraform_bucket plan -input=false -out=tfplan \
+        -var="token=${{ secrets.YC_TOKEN }}" \
+        -var="cloud_id=${{ secrets.YC_CLOUD_ID }}" \
+        -var="folder_id=${{ secrets.YC_FOLDER_ID }}" \
+        -var="ssh_public=${{ secrets.SSH_PUBLIC }}"
+
+    - name: Terraform Apply (Manual Trigger)
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true'
+      run: terraform -chdir=./terraform_bucket apply -input=false tfplan
 ```
 
 </details>
