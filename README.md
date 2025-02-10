@@ -54,7 +54,9 @@
 
 Конфигурация terraform: 
 
-<details><summary>[provider.tf](stepynin-georgy/netology-diplom/terraform_infrastructure/provider.tf)</summary>
+[provider.tf](stepynin-georgy/netology-diplom/terraform_infrastructure/provider.tf):
+
+<details><summary> Листинг provider.tf</summary>
 
 ```
 terraform {
@@ -76,7 +78,9 @@ provider "yandex" {
 
 </details>
 
-<details><summary>main.tf</summary>
+[main.tf](stepynin-georgy/netology-diplom/terraform_bucket/main.tf):
+
+<details><summary>Листинг main.tf</summary>
 
 ```
 resource "yandex_storage_bucket" "diplom-bucket" {
@@ -92,7 +96,9 @@ resource "yandex_storage_bucket" "diplom-bucket" {
 
 </details>
 
-<details><summary>bucket variables.tf</summary>
+[variables.tf](stepynin-georgy/netology-diplom/terraform_bucket/variables.tf):
+
+<details><summary>Листинг variables.tf</summary>
 
 ```
 variable "default_zone_a" {
@@ -150,8 +156,9 @@ variable "ssh_public" {
 
 </details>
 
+[permission_account.tf](stepynin-georgy/netology-diplom/terraform_bucket/permission_account.tf)
 
-<details><summary>premission_account.tf</summary>
+<details><summary>Листинг premission_account.tf</summary>
 
 ```
 resource "yandex_iam_service_account" "service-account" {
@@ -178,7 +185,9 @@ resource "yandex_kms_symmetric_key" "key" {
 
 </details>
 
-<details><summary>infrastructure.tf</summary>
+[infrastructure.tf](terraform_infrastructure/infrastructure.tf)
+
+<details><summary>Листинг infrastructure.tf</summary>
 
 ```
 resource "yandex_storage_object" "picture" {
@@ -218,7 +227,9 @@ resource "yandex_vpc_subnet" "public-d" {
 
 </details>
 
-<details><summary>locals.tf</summary>
+[locals.tf](terraform_infrastructure/locals.tf)
+
+<details><summary>Листинг locals.tf</summary>
 
 ```
 locals {
@@ -237,7 +248,9 @@ locals {
 
 </details>
 
-<details><summary>infrasructure variables.tf</summary>
+[variables.tf](terraform_infrastructure/variables.tf)
+
+<details><summary>Листинг variables.tf</summary>
 
 ```
 variable "default_zone_a" {
@@ -299,7 +312,7 @@ variable "ssh_public" {
 
 </details>
 
-<details><summary>terraform_bucket.yml</summary>
+<details><summary>Листинг terraform_bucket.yml</summary>
 
 ```
 name: 'Terraform bucket'
@@ -359,9 +372,7 @@ jobs:
 
 </details>
 
-</details>
-
-<details><summary>terraform_infrastructure.yml</summary>
+<details><summary>Листинг terraform_infrastructure.yml</summary>
 
 ```
 name: 'Terraform infrastructure'
@@ -1452,7 +1463,9 @@ GitHub Actions выполняются при ручном запуске, а т�
 
 Изспользуя terraform были созданы 3 виртуальные машины на Ubuntu 24.04.
 
-<details><summary>cluster.tf</summary>
+[cluster.tf](terraform_infrastructure/cluster.tf)
+
+<details><summary>Листинг cluster.tf</summary>
 
 ```
 data "yandex_compute_image" "ubuntu" {
@@ -1498,7 +1511,9 @@ resource "yandex_compute_instance" "nat-instance" {
 
 </details>
 
-<details><summary>meta.yml</summary>
+[meta.yml](terraform_infrastructure/meta.yml)
+
+<details><summary>Листинг meta.yml</summary>
 
 ```
 #cloud-config
