@@ -295,7 +295,7 @@ variable "ssh_public" {
 ```
 </details>
 
-Для развертывания инфраструктуры был выбран Github Action. Для этого была создана папка .github/workflows/, а в ней два файла: terraform-bucket.yml - для развертывания бакета и сервисного аккаунта, terraform-infrastructure.yml - для развертывания остальной инфраструктуры (ВМ, сети, подсети и пр.).
+Для развертывания инфраструктуры был выбран Github Action. Для этого была создана папка .github/workflows/, а в ней два файла: [terraform-bucket.yml](stepynin-georgy/netology-diplom/.github/workflows/terraform_bucket.yml) - для развертывания бакета и сервисного аккаунта, [terraform-infrastructure.yml](stepynin-georgy/netology-diplom/.github/workflows/terraform_infrastructure.yml) - для развертывания остальной инфраструктуры (ВМ, сети, подсети и пр.).
 
 </details>
 
@@ -1767,6 +1767,173 @@ latest: digest: sha256:5dbf98c94d4ae9107f36e3b508a143596f053fc3e1b84fd5457018f44
 2. Http доступ на 80 порту к web интерфейсу grafana.
 3. Дашборды в grafana отображающие состояние Kubernetes кластера.
 4. Http доступ на 80 порту к тестовому приложению.
+
+### Решение. Подготовка cистемы мониторинга и деплой приложения
+
+Установку cистемы мониторинга решил производить с помощью helm. Установка helm:
+
+```
+  curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+  chmod 700 get_helm.sh
+  ./get_helm.sh
+```
+
+Добавление репозитория prometheus-community и загрузка файла с настройками prometheus:
+
+```
+  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  helm repo update
+  helm show values prometheus-community/kube-prometheus-stack > helm-prometheus/values.yaml
+```
+
+Запуск установки cистемы мониторинга с указанием файла с настройками:
+
+```
+  helm upgrade --install monitoring prommetheus-community/kube-prometheus-stack --create-namespace -n monitoring -f helm-prometheus/values.yaml
+```
+
+Видно, что сервисы и поды grafana, prometheus, alertmanager и node_exporter успешно запустились:
+
+```
+user@node1:/opt$ kubectl --namespace monitoring get pods
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-monitoring-kube-prometheus-alertmanager-0   2/2     Running   0          66s
+monitoring-grafana-5cffcd859c-mzjpg                      3/3     Running   0          86s
+monitoring-kube-prometheus-operator-6f566f4545-9xmbm     1/1     Running   0          85s
+monitoring-kube-state-metrics-86465bccb9-pds7d           1/1     Running   0          86s
+monitoring-prometheus-node-exporter-9mz8b                1/1     Running   0          86s
+monitoring-prometheus-node-exporter-9xgrv                1/1     Running   0          86s
+monitoring-prometheus-node-exporter-zmmvp                1/1     Running   0          86s
+prometheus-monitoring-kube-prometheus-prometheus-0       2/2     Running   0          65s
+
+
+user@node1:/opt$ kubectl --namespace monitoring get svc
+NAME                                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+alertmanager-operated                     ClusterIP   None            <none>        9093/TCP,9094/TCP,9094/UDP   3h34m
+monitoring-grafana                        NodePort    10.233.34.36    <none>        80:31558/TCP                 3h35m
+monitoring-kube-prometheus-alertmanager   ClusterIP   10.233.46.153   <none>        9093/TCP,8080/TCP            3h35m
+monitoring-kube-prometheus-operator       ClusterIP   10.233.16.58    <none>        443/TCP                      3h35m
+monitoring-kube-prometheus-prometheus     ClusterIP   10.233.48.193   <none>        9090/TCP,8080/TCP            3h35m
+monitoring-kube-state-metrics             ClusterIP   10.233.61.255   <none>        8080/TCP                     3h35m
+monitoring-prometheus-node-exporter       ClusterIP   10.233.15.215   <none>        9100/TCP                     3h35m
+prometheus-operated                       ClusterIP   None            <none>        9090/TCP 
+```
+
+Prometheus доступен по адресу: http://158.160.13.135:32004/query :
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_4.png)
+
+Grafana доступна по адресу: http://158.160.13.135:31558/login :
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_3.png)
+
+Дашборд grafana отображающий состояние kubernetes кластера:
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_13.png)
+
+Для деплоя тестового приложения в кластер написан [deployment.yaml](https://github.com/stepynin-georgy/nginx-diplom/blob/main/deployment.yaml):
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-app
+  labels:
+    app: test-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-app
+  template:
+    metadata:
+      labels:
+        app: test-app
+    spec:
+      containers:
+      - name: test-app
+        image: stepynin/nginx:v1.3.1
+        ports:
+        - containerPort: 80
+```
+
+Создание пространства имен и запуск деплоймент:
+
+```
+user@node1:/opt$ kubectl create namespace test-app
+namespace/test-app created
+user@node1:/opt$ kubectl apply -f deployment.yaml -n test-app
+deployment.apps/test-app created
+user@node1:/opt$ kubectl get deployments.apps -n test-app
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+test-app   1/1     1            1           16s
+user@node1:/opt$
+```
+
+Подключился к поду, curl localhost возвращает содержимое index.html - приложение развернуто в кластере и работает корректно:
+
+```
+user@node1:/opt$ kubectl get pod -n test-app
+NAME                        READY   STATUS    RESTARTS   AGE
+test-app-7b56fd84d8-jqfct   1/1     Running   0          3m43s
+user@node1:/opt$ kubectl exec -ti -n test-app test-app-7b56fd84d8-jqfct -c test-app -- /bin/bash
+root@test-app-7b56fd84d8-jqfct:/# curl localhost
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+root@test-app-7b56fd84d8-jqfct:/#
+```
+
+Далее, чтобы приложение было доступно по внешнему адресу на определенном порту, был написан service.yaml (далее был добавлен в deployment.yaml):
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-app-svc
+spec:
+  selector:
+    app: test-app
+  ports:
+    - name: test-app-svc
+      protocol: TCP
+      port: 80
+      nodePort: 30080
+  type: NodePort
+```
+
+Применил изменения, теперь приложение доступно по внешнему адресу по порту 30080:
+
+```
+user@node1:/opt$ kubectl apply -f service.yaml -n test-app
+service/test-app-svc created
+user@node1:/opt$ kubectl get service -n test-app
+NAME           TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+test-app-svc   NodePort   10.233.47.93   <none>        80:30080/TCP   13s
+```
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_5.png)
+
 ---
 ### Установка и настройка CI/CD
 
@@ -1784,6 +1951,134 @@ latest: digest: sha256:5dbf98c94d4ae9107f36e3b508a143596f053fc3e1b84fd5457018f44
 1. Интерфейс ci/cd сервиса доступен по http.
 2. При любом коммите в репозиторие с тестовым приложением происходит сборка и отправка в регистр Docker образа.
 3. При создании тега (например, v1.0.0) происходит сборка и отправка с соответствующим label в регистри, а также деплой соответствующего Docker образа в кластер Kubernetes.
+
+### Решение. Установка и настройка CI/CD
+
+Выполнять настройки ci/cd системы для автоматической сборки docker image и деплоя приложения при изменении бeдует использоваться GitHub Action. В репозиторий https://github.com/stepynin-georgy/nginx-diplom были добавлены secrets для входа в учетную запись dockerhub и конфиг для подключения к кластеру kubernetest через kubectl:
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_14.png)
+
+В репозитории была создана директория .github/workflows/, в ней файл: [ci-cd.yaml](https://github.com/stepynin-georgy/nginx-diplom/blob/main/.github/workflows/ci-cd.yaml) - автоматической сборки docker image и деплоя приложени:
+
+
+<details><summary>ci-cd.yaml</summary>
+
+```
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+env:
+  IMAGE_TAG: stepynin/nginx
+  RELEASE_NAME: nginx
+  NAMESPACE: netology
+
+jobs:
+  build-and-push:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Extract version from commit messages
+        run: |
+          VERSION=$(git log -1 --pretty=format:%s | grep -oP 'v\d+\.\d+\.\d+')
+          if [[ ! -z "$VERSION" ]]; then
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          else
+            echo "No version found in the commit message"
+            exit 1
+          fi
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_TAG }}:${{ env.VERSION }}
+
+  deploy:
+    needs: build-and-push
+    name: Deploy to Kubernetes
+    if: startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Kubernetes
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.31.0'
+
+      - name: Extract version from commit messages
+        run: |
+          VERSION=$(git log -1 --pretty=format:%B)
+          if [[ ! -z "$VERSION" ]]; then
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          else
+            echo "No version found in the commit message"
+            exit 1
+          fi
+
+      - name: Replace image tag in deployment.yaml
+        if: env.DEPLOY == 'false'
+       
+        run: |
+          sed -i "s|image: stepynin/nginx:.*|image: ${{ env.IMAGE_TAG }}|" ./deployment.yaml
+        env:
+          IMAGE_TAG: stepynin/nginx:${{ env.VERSION }}
+      
+      - name: Create kubeconfig
+        run: |
+          mkdir -p $HOME/.kube/
+      - name: Authenticate to Kubernetes cluster
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "${KUBECONFIG}" > ${HOME}/.kube/config
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -n ${{ env.NAMESPACE }} -f ./deployment.yaml --validate=false --insecure-skip-tls-verify
+```
+
+</details>
+
+Создаём namespace netology командой:
+
+```
+kubectl create namespace netology
+```
+
+Отредактируем index.html. Пушим в репозиторий с коммитом v1.2.1. Автоматическая сборка image с тегом v1.2.1 и деплой приложения в кластер прошли успешно:
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_15.png)
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_6.png)
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_16.png)
+
+Повторяем те же самые действия, но с другим тегом, v1.3.1. Сборка и деплой также прошли успешно:
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_7.png)
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_17.png)
+
+![изображение](stepynin-georgy/netology-diplom/img/Screenshot_18.png)
+
+Сслыка на action: https://github.com/stepynin-georgy/nginx-diplom/actions/runs/13159422703
 
 ---
 ## Что необходимо для сдачи задания?
