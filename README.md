@@ -2000,34 +2000,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Extract version from commit messages
+        
+      - name: Determine Docker tag
+        id: determine-tag
         run: |
-          VERSION=$(git log -1 --pretty=format:%s | grep -oP 'v\d+\.\d+\.\d+')
-          if [[ ! -z "$VERSION" ]]; then
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           else
-            echo "No version found in the commit message"
-            exit 1
+            echo "TAG=latest" >> $GITHUB_ENV
           fi
+          
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_TAG }}:${{ env.VERSION }}
+          tags: ${{ env.IMAGE_TAG }}:${{ env.TAG }}
 
   deploy:
     needs: build-and-push
     name: Deploy to Kubernetes
-    if: startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -2038,32 +2041,29 @@ jobs:
         with:
           version: 'v1.31.0'
 
-      - name: Extract version from commit messages
+      - name: Determine Docker tag
+        id: determine-tag
         run: |
-          VERSION=$(git log -1 --pretty=format:%B)
-          if [[ ! -z "$VERSION" ]]; then
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           else
-            echo "No version found in the commit message"
-            exit 1
+            echo "TAG=latest" >> $GITHUB_ENV
           fi
 
       - name: Replace image tag in deployment.yaml
-        if: env.DEPLOY == 'false'
-       
         run: |
-          sed -i "s|image: stepynin/nginx:.*|image: ${{ env.IMAGE_TAG }}|" ./deployment.yaml
-        env:
-          IMAGE_TAG: stepynin/nginx:${{ env.VERSION }}
+          sed -i "s|image: ${{ env.IMAGE_TAG }}:.*|image: ${{ env.IMAGE_TAG }}:${{ env.TAG }}|" ./deployment.yaml
       
       - name: Create kubeconfig
         run: |
           mkdir -p $HOME/.kube/
+          
       - name: Authenticate to Kubernetes cluster
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
         run: |
           echo "${KUBECONFIG}" > ${HOME}/.kube/config
+          
       - name: Apply Kubernetes manifests
         run: |
           kubectl apply -n ${{ env.NAMESPACE }} -f ./deployment.yaml --validate=false --insecure-skip-tls-verify
@@ -2071,29 +2071,31 @@ jobs:
 
 </details>
 
+В шаге Determine Docker tag проверяется, если запуск пайплайна был вызван тегом, то используется этот тег, иначе используется latest. Условие if: startsWith(github.ref, 'refs/tags/v') в job deploy гарантирует, что деплой будет происходить только при наличии тега. В шаге Replace image tag in deployment.yaml заменяется тег образа в манифесте на актуальный.
+
 Создаём namespace netology командой:
 
 ```
 kubectl create namespace netology
 ```
 
-Отредактируем index.html. Пушим в репозиторий с коммитом v1.2.1. Автоматическая сборка image с тегом v1.2.1 и деплой приложения в кластер прошли успешно:
+Отредактируем index.html. Пушим в репозиторий с произвольным коммитом. Происходит сборка образа с тегом latest. Деплой приложения в кластер в этом случае не проиходит:
 
-![изображение](img/Screenshot_15.png)
+![изображение](img/Screenshot_20.png)
 
-![изображение](img/Screenshot_6.png)
+Сслыка на action: https://github.com/stepynin-georgy/nginx-diplom/actions/runs/13258060799
 
-![изображение](img/Screenshot_16.png)
+Создаем тег v1.4.1, паплайн запускается автоматически для этого тега. Сборка и деплой прошли успешно:
 
-Повторяем те же самые действия, но с другим тегом, v1.3.1. Сборка и деплой также прошли успешно:
+![изображение](img/Screenshot_21.png)
 
-![изображение](img/Screenshot_7.png)
+![изображение](img/Screenshot_22.png)
 
-![изображение](img/Screenshot_17.png)
+Приложение работает:
 
-![изображение](img/Screenshot_18.png)
+![изображение](img/Screenshot_23.png)
 
-Сслыка на action: https://github.com/stepynin-georgy/nginx-diplom/actions/runs/13159422703
+Сслыка на action: https://github.com/stepynin-georgy/nginx-diplom/actions/runs/13258121798
 
 ---
 ## Что необходимо для сдачи задания?
